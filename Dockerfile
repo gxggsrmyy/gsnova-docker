@@ -1,20 +1,19 @@
-FROM alpine:3.6
+FROM golang:1.12beta2-alpine3.8 as builder
 
-ENV VER=0.31.0 CERT_PEM=none KEY_PEM=none
+RUN apk add --update git && \
+    go get -d github.com/devcodewak/avonsg_openshift/cmd  && \
+    go build -ldflags="-s -w" -o /go/bin/web github.com/devcodewak/avonsg_openshift/cmd
 
-RUN \
-    apk add --no-cache --virtual  curl \
-    && mkdir -m 777 /gsnova \
-    && cd /gsnova \
-    && curl -fSL https://github.com/yinqiwen/gsnova/releases/download/v$VER/gsnova_server_linux_amd64-v$VER.tar.bz2 | tar xj  \
-    && rm -rf server.json \
-    && rm -rf gsnova_server_linux_amd64-v$VER.tar.bz2 \
-    && chgrp -R 0 /gsnova \
-    && chmod -R g+rwX /gsnova 
-    
-ADD server.json /gsnova/server.json    
-ADD entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh 
-ENTRYPOINT  /entrypoint.sh 
 
-EXPOSE 8080 8088
+	
+FROM alpine:3.8
+
+WORKDIR /bin/
+
+COPY --from=builder /go/bin/web .
+
+RUN web -version
+
+CMD ["/bin/web", "-server", "-cmd", "-key", "809240d3a021449f6e67aa73221d42df942a308a", "-listen", "http2://:8443", "-listen", "http://:8444", "-log", "null"]
+
+EXPOSE 8443 8444
