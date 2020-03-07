@@ -1,17 +1,19 @@
-# Start from a Debian image with the latest version of Go installed
-# and a workspace (GOPATH) configured at /go.
-FROM golang:1.9-alpine3.6
+FROM alpine:3.6
 
-# Copy the local package files to the container's workspace.
-#ADD ./server.json /go/bin
+ENV VER=0.31.0
 
-RUN apk add --update git && \
-    go get -t github.com/yinqiwen/gsnova  && \
-    go install github.com/yinqiwen/gsnova 
+RUN \
+    apk add --no-cache --virtual  curl \
+    && mkdir -m 777 /gsnova \
+    && cd /gsnova \
+    && curl -fSL https://github.com/yinqiwen/gsnova/releases/download/$VER/gsnova_server_linux_amd64-$VER.tar.bz2 | tar xj  \
+    && rm -rf server.json \
+    && rm -rf gsnova_server_linux_amd64-$VER.tar.bz2 \
+    && chgrp -R 0 /gsnova \
+    && chmod -R g+rwX /gsnova 
+    
+ADD server.json /gsnova/server.json    
 
-#WORKDIR /go/bin
-# Run the outyet command by default when the container starts.
-#ENTRYPOINT ["/go/bin/vps"]
-CMD ["/go/bin/gsnova", "-cmd" ,"-server", "-key","809240d3a021449f6e67aa73221d42df942a308a", "-tcp", ":9443", "-quic", ":9443", "-http", ":9444", "-kcp", ":9444", "-http2", ":9445", "-tls", ":9446", "-log", "console"]
-# Document that the service listens on port 9443.
-EXPOSE 9443 9444 9445 9446
+CMD ["/gsnova/gsnova_server","-conf","/gsnova/server.json"]
+
+EXPOSE 8080 8088
