@@ -1,26 +1,20 @@
-FROM alpine:3.7
+FROM alpine:3.6
 
-ARG TZ="Asia/Shanghai"
-ARG GSNOVA_VER="latest"
+ENV VER=0.31.0 CERT_PEM=none KEY_PEM=none
 
-ENV TZ ${TZ}
-ENV GSNOVA_VER ${GSNOVA_VER}
-ENV GSNOVA_DOWNLOAD_URL https://github.com/yinqiwen/gsnova/releases/download/${GSNOVA_VER}/gsnova_linux_amd64-${GSNOVA_VER}.tar.bz2
+RUN \
+    apk add --no-cache --virtual  curl \
+    && mkdir -m 777 /gsnova \
+    && cd /gsnova \
+    && curl -fSL https://github.com/yinqiwen/gsnova/releases/download/v$VER/gsnova_server_linux_amd64-v$VER.tar.bz2 | tar xj  \
+    && rm -rf server.json \
+    && rm -rf gsnova_server_linux_amd64-v$VER.tar.bz2 \
+    && chgrp -R 0 /gsnova \
+    && chmod -R g+rwX /gsnova 
+    
+ADD server.json /gsnova/server.json    
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh 
+ENTRYPOINT  /entrypoint.sh 
 
-RUN apk upgrade --update \
-    && apk add curl tzdata \
-    && mkdir gsnova \
-    && (cd gsnova && curl -sfSL ${GSNOVA_DOWNLOAD_URL} | tar xj) \
-    && mv /gsnova/gsnova /usr/bin/gsnova \
-    && mv /gsnova /etc/gsnova \
-    && chmod +x /usr/bin/gsnova \
-    && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
-    && echo ${TZ} > /etc/timezone \
-    && apk del curl \
-    && rm -rf /var/cache/apk/*
-
-# Document that the service listens on port 9443.
-EXPOSE 9443 9444 9445 9446
-
-# Run the outyet command by default when the container starts.
-CMD ["gsnova","-cmd" ,"-server", "-key", "809240d3a021449f6e67aa73221d42df942a308a", "-listen", "tcp://:9443", "-listen", "quic://:9443", "-listen", "http://:9444", "-listen", "kcp://:9444", "-listen", "http2://:9445", "-listen", "tls://:9446", "-log", "console"]
+EXPOSE 8080 8088
