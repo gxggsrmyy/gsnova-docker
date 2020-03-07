@@ -1,19 +1,17 @@
-FROM golang:1.12beta2-alpine3.8 as builder
+# Start from a Debian image with the latest version of Go installed
+# and a workspace (GOPATH) configured at /go.
+FROM golang:1.9-alpine3.6
+
+# Copy the local package files to the container's workspace.
+#ADD ./server.json /go/bin
 
 RUN apk add --update git && \
-    go get -d github.com/devcodewak/avonsg_openshift/cmd  && \
-    go build -ldflags="-s -w" -o /go/bin/web github.com/devcodewak/avonsg_openshift/cmd
+    go get -t github.com/yinqiwen/gsnova  && \
+    go install github.com/yinqiwen/gsnova 
 
-
-	
-FROM alpine:3.8
-
-WORKDIR /bin/
-
-COPY --from=builder /go/bin/web .
-
-RUN web -version
-
-CMD ["/bin/web", "-server", "-cmd", "-key", "809240d3a021449f6e67aa73221d42df942a308a", "-listen", "http2://:8443", "-listen", "http://:8444", "-log", "null"]
-
-EXPOSE 8443 8444
+#WORKDIR /go/bin
+# Run the outyet command by default when the container starts.
+#ENTRYPOINT ["/go/bin/vps"]
+CMD ["/go/bin/gsnova", "-cmd" ,"-server", "-key","809240d3a021449f6e67aa73221d42df942a308a", "-tcp", ":9443", "-quic", ":9443", "-http", ":9444", "-kcp", ":9444", "-http2", ":9445", "-tls", ":9446", "-log", "console"]
+# Document that the service listens on port 9443.
+EXPOSE 9443 9444 9445 9446
